@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Memory Game - IT Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap');
+  body {
+    background: #121212;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    user-select: none;
+  }
+
+  h1 {
+    font-weight: 600;
+    color: #00d8ff;
+    margin-bottom: 10px;
+    text-align: center;
+    text-shadow: 0 0 7px #00d8ff88;
+  }
+
+  .game-container {
+    width: 360px;
+    max-width: 90vw;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    position: relative;
+    width: 80px;
+    height: 100px;
+    perspective: 1000px;
+    cursor: pointer;
+  }
+
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+    border-radius: 12px;
+    box-shadow: 0 6px 12px #0008;
+    background-color: #222;
+  }
+
+  .card.flipped .card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .card-front,
+  .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .card-front {
+    background: #08b1ff;
+    color: #003349;
+    font-weight: 700;
+    font-size: 16px;
+    box-shadow: inset 0 0 15px #00d8ffcc;
+    user-select: none;
+  }
+
+  .card-back {
+    background: linear-gradient(145deg, #111c27, #283345);
+    color: #00d8ffaa;
+    transform: rotateY(180deg);
+    font-size: 36px;
+  }
+
+  button {
+    background: #00d8ff;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-weight: 600;
+    color: #121212;
+    cursor: pointer;
+    box-shadow: 0 5px 15px #00d8ff77;
+    transition: background 0.3s ease;
+    user-select: none;
+    font-size: 16px;
+  }
+
+  button:hover {
+    background: #0099cc;
+    box-shadow: 0 8px 20px #0099ccbb;
+  }
+
+  .message {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 10px;
+    color: #00ffb3;
+    text-shadow: 0 0 8px #00ffb380;
+    min-height: 24px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <h1>Memory Game - IT Edition</h1>
+  <div class="game-container" id="game"></div>
+  <button id="resetBtn">Restart Game</button>
+  <div class="message" id="message"></div>
+
+<script>
+  const cardsData = [
+    { id: 1, label: 'JavaScript', icon: '🟨' },
+    { id: 2, label: 'HTML', icon: '🟧' },
+    { id: 3, label: 'CSS', icon: '🟦' },
+    { id: 4, label: 'Python', icon: '🐍' },
+    { id: 5, label: 'API', icon: '🔗' },
+    { id: 6, label: 'Cloud', icon: '☁️' },
+    { id: 7, label: 'Bug', icon: '🐞' },
+    { id: 8, label: 'Server', icon: '🖥️' },
+  ];
+
+  let gameContainer = document.getElementById('game');
+  let resetBtn = document.getElementById('resetBtn');
+  let messageEl = document.getElementById('message');
+
+  let cards = [];
+  let flippedCards = [];
+  let matchedPairs = 0;
+  const totalPairs = cardsData.length;
+
+  function shuffle(array) {
+    // Fisher-Yates shuffle
+    for (let i = array.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function createCardElement(cardObj) {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    card.dataset.id = cardObj.id;
+
+    const cardInner = document.createElement('div');
+    cardInner.classList.add('card-inner');
+
+    const cardFront = document.createElement('div');
+    cardFront.classList.add('card-front');
+    cardFront.textContent = cardObj.label;
+
+    const cardBack = document.createElement('div');
+    cardBack.classList.add('card-back');
+    cardBack.textContent = cardObj.icon;
+
+    cardInner.appendChild(cardFront);
+    cardInner.appendChild(cardBack);
+    card.appendChild(cardInner);
+
+    card.addEventListener('click', () => {
+      if (
+        flippedCards.length < 2 &&
+        !card.classList.contains('flipped') &&
+        !card.classList.contains('matched')
+      ) {
+        flipCard(card);
+      }
+    });
+
+    return card;
+  }
+
+  function flipCard(card) {
+    card.classList.add('flipped');
+    flippedCards.push(card);
+
+    if (flippedCards.length === 2) {
+      checkForMatch();
+    }
+  }
+
+  function checkForMatch() {
+    const [card1, card2] = flippedCards;
+    if (card1.dataset.id === card2.dataset.id) {
+      // Match
+      card1.classList.add('matched');
+      card2.classList.add('matched');
+      matchedPairs++;
+      flippedCards = [];
+      messageEl.textContent = `Great! You found ${matchedPairs} of ${totalPairs} pairs.`;
+      if (matchedPairs === totalPairs) {
+        messageEl.textContent = "🎉 Congratulations! You matched all pairs!";
+      }
+    } else {
+      // Not a match: flip back after short delay
+      messageEl.textContent = "Try again!";
+      setTimeout(() => {
+        card1.classList.remove('flipped');
+        card2.classList.remove('flipped');
+        flippedCards = [];
+        messageEl.textContent = "";
+      }, 1200);
+    }
+  }
+
+  function setupGame() {
+    matchedPairs = 0;
+    flippedCards = [];
+    messageEl.textContent = '';
+    gameContainer.innerHTML = '';
+
+    // Prepare doubled cards for pairs
+    cards = [...cardsData, ...cardsData];
+    shuffle(cards);
+
+    cards.forEach(cardObj => {
+      const cardElement = createCardElement(cardObj);
+      gameContainer.appendChild(cardElement);
+    });
+  }
+
+  resetBtn.addEventListener('click', () => {
+    setupGame();
+  });
+
+  // Initialize the game on page load
+  setupGame();
+</script>
+</body>
+</html>
+
